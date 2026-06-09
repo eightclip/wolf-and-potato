@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wolf & Potato 🐺🥔
 
-## Getting Started
+Real-time heatmap of where Razzy (Wolf) and Bucky (Potato) are hanging out throughout the day, based on ESPresense BLE beacons + MQTT.
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Shows a cute illustrated floor plan of the house (Garage, Studio, Kitchen, Living Room, Bedroom, Yard)
+- Dual-color heatmap: Razzy = blue/silver, Bucky = warm orange
+- Pulsing live dot shows where each dog is *right now*
+- Toggle each dog on/off
+- Time range filter: Last 1h / Last 6h / Today / Yesterday
+- Live updates via Supabase Realtime — no refresh needed
+
+## Architecture
+
+```
+ESPresense nodes (ESP32 per room)
+  └─ MQTT  espresense/devices/<beacon>/<room>  { distance: X.X }
+       │
+wolf-potato-bridge (Docker on QNAP)
+  └─ INSERT wolf_potato_locations (dog, room, entered_at)
+       │
+Supabase (wolf_potato_locations table)
+       │
+Next.js on Vercel  ← this repo's root
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The bridge is intentionally separate from GAEDHD. Same MQTT broker, different Supabase table, different Docker container.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Supabase
 
-## Learn More
+Run `supabase/migrations.sql` in your Supabase SQL editor. Enable Realtime on the `wolf_potato_locations` table.
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Next.js (Vercel)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.local.example` → `.env.local` and fill in your Supabase project URL and anon key.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
 
-## Deploy on Vercel
+Deploy to Vercel, set the same env vars in the Vercel dashboard (or use the `vercel.json` secret references).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Bridge (QNAP Docker)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+cd bridge
+cp .env.example .env
+# Fill in MQTT creds and Supabase service role key
+docker compose up -d
+```
+
+Configure your ESPresense beacon aliases to match `RAZZY_BEACON_ID` and `BUCKY_BEACON_ID` in `.env`.
+
+## Dev
+
+```bash
+pnpm install
+pnpm dev
+```
+
+## Adding new rooms
+
+1. Add the room slug to `RoomId` in `lib/types.ts`
+2. Add bounds + label to `ROOM_META`
+3. Add the room `<rect>` to `components/FloorPlan.tsx`
+
+## Project structure
+
+```
+app/             Next.js app router
+components/
+  DogTracker.tsx  Main page component (data fetching, state)
+  FloorPlan.tsx   SVG illustrated floor plan
+  HeatLayer.tsx   Heatmap overlay per dog
+lib/
+  types.ts        Shared types, room/dog metadata
+  supabase.ts     Supabase client (lazy init)
+  heatmap.ts      Heat computation utilities
+bridge/           Docker service (runs on QNAP)
+supabase/         SQL migrations
+```
