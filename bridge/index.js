@@ -11,6 +11,7 @@
 
 import mqtt from 'mqtt'
 import { createClient } from '@supabase/supabase-js'
+import ws from 'ws'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -58,7 +59,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 if (!MQTT_PASS) console.warn('[warn] MQTT_PASS is not set — broker auth will fail.')
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  realtime: { transport: ws },
+})
 const TABLE = 'wolf_potato_locations'
 
 console.log(`[init] wolf-potato bridge`)
