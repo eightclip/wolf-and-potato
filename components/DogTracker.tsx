@@ -75,7 +75,7 @@ export default function DogTracker() {
       <header className="mb-8 flex flex-col items-center text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/wolf-potato-logo.jpg"
+          src="/wolf-potato-logo.png"
           alt="Wolf &amp; Potato"
           width={176}
           height={176}
