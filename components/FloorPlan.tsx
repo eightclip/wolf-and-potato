@@ -95,12 +95,12 @@ export default function FloorPlan({ activeRoom, children }: Props) {
       {/* Outer shell */}
       <rect
         x={SHELL.x} y={SHELL.y} width={SHELL.w} height={SHELL.h}
-        fill="rgba(245,241,234,0.4)" stroke="#3d3830" strokeWidth="2" rx="2"
+        fill="rgba(245,241,234,0.25)" stroke="#b3a48f" strokeWidth="1.1" rx="2"
       />
       {/* Vertical wall: living room | (kitchen+office) */}
-      <line x1="224" y1={SHELL.y} x2="224" y2={SHELL.y + SHELL.h} stroke="#7a7068" strokeWidth="1.5" />
+      <line x1="224" y1={SHELL.y} x2="224" y2={SHELL.y + SHELL.h} stroke="#c4b6a1" strokeWidth="0.9" />
       {/* Horizontal wall: kitchen | office */}
-      <line x1="224" y1="190" x2={SHELL.x + SHELL.w} y2="190" stroke="#7a7068" strokeWidth="1.5" />
+      <line x1="224" y1="190" x2={SHELL.x + SHELL.w} y2="190" stroke="#c4b6a1" strokeWidth="0.9" />
 
       {/* Interior doorways (gaps in the walls) */}
       <rect x="222" y="96"  width="4" height="26" fill="#f5f1ea" />
