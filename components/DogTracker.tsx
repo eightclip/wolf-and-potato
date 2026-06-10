@@ -72,11 +72,17 @@ export default function DogTracker() {
       style={{ background: '#f2ede6', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}
     >
       {/* Header */}
-      <header className="mb-8 text-center">
-        <p className="text-xs tracking-[0.25em] text-stone-400 uppercase mb-1">
-          Wolf &amp; Potato
-        </p>
-        <h1 className="text-xl font-light tracking-tight text-stone-700">
+      <header className="mb-8 flex flex-col items-center text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/wolf-potato-logo.jpg"
+          alt="Wolf &amp; Potato"
+          width={176}
+          height={176}
+          className="w-44 h-44 object-contain"
+          style={{ mixBlendMode: 'multiply' }}
+        />
+        <h1 className="-mt-3 text-xl font-light tracking-tight text-stone-700">
           Dog Day Heat Map
         </h1>
       </header>
