@@ -15,26 +15,6 @@ const TIME_OPTIONS: { label: string; value: TimeRange }[] = [
   { label: 'YESTERDAY', value: 'yesterday' },
 ]
 
-// Mock data for visual preview when no beacons are connected
-const MOCK_HEAT: Record<Dog, RoomHeat[]> = {
-  razzy: [
-    { room: 'bedroom',     minutes: 240, isLive: true  },
-    { room: 'living_room', minutes: 90,  isLive: false },
-    { room: 'yard',        minutes: 60,  isLive: false },
-    { room: 'kitchen',     minutes: 20,  isLive: false },
-    { room: 'studio',      minutes: 5,   isLive: false },
-    { room: 'garage',      minutes: 0,   isLive: false },
-  ],
-  bucky: [
-    { room: 'living_room', minutes: 180, isLive: false },
-    { room: 'yard',        minutes: 120, isLive: true  },
-    { room: 'bedroom',     minutes: 45,  isLive: false },
-    { room: 'kitchen',     minutes: 30,  isLive: false },
-    { room: 'garage',      minutes: 10,  isLive: false },
-    { room: 'studio',      minutes: 0,   isLive: false },
-  ],
-}
-
 export default function DogTracker() {
   const [visible, setVisible] = useState<Record<Dog, boolean>>({ razzy: true, bucky: true })
   const [timeRange, setTimeRange] = useState<TimeRange>('today')
@@ -82,8 +62,8 @@ export default function DogTracker() {
   }
 
   const noData = !loading && events.length === 0
-  const razzy = noData ? { heat: MOCK_HEAT.razzy, liveRoom: 'bedroom' as RoomId } : getDogState('razzy')
-  const bucky = noData ? { heat: MOCK_HEAT.bucky, liveRoom: 'yard' as RoomId }    : getDogState('bucky')
+  const razzy = getDogState('razzy')
+  const bucky = getDogState('bucky')
   const toggleDog = (dog: Dog) => setVisible(v => ({ ...v, [dog]: !v[dog] }))
 
   return (
@@ -97,7 +77,7 @@ export default function DogTracker() {
           Wolf &amp; Potato
         </p>
         <h1 className="text-xl font-light tracking-tight text-stone-700">
-          where are the babies
+          Dog Day Heat Map
         </h1>
       </header>
 
@@ -194,7 +174,7 @@ export default function DogTracker() {
 
       {noData && (
         <p className="text-center text-stone-400 text-xs tracking-[0.2em] uppercase mt-4 opacity-50">
-          preview mode — connect beacons for live data
+          no movement data yet — are the beacons on?
         </p>
       )}
     </div>
