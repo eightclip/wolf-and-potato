@@ -1,9 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "pnpm build",
-  "installCommand": "pnpm install",
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@wolf-potato-supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@wolf-potato-supabase-anon-key"
-  }
+  "installCommand": "pnpm install"
 }
