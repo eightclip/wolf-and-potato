@@ -1,11 +1,11 @@
 /**
- * Wolf-Potato Presence Bridge
+ * Wolf-Potato Presence Bridge — sampling model
  *
- * Watches ESPresense MQTT topics for both dogs' beacons, determines the
- * nearest room per dog, and writes timestamped room events to the
- * wolf_potato_locations Supabase table.
+ * Watches ESPresense MQTT topics for both dogs' beacons and, once a minute,
+ * drops a single "sample dot" row into the wolf_potato_locations table for
+ * each dog at its nearest sensor. Accumulated dot density over time shows
+ * where the dogs actually spend their time.
  *
- * Mirrors the GAEDHD presence-bridge pattern but tracks two dogs independently.
  * Runs on the QNAP via Docker alongside the GAEDHD bridge.
  */
 
@@ -45,12 +45,11 @@ const RAZZY_ID = process.env.RAZZY_BEACON_ID || 'razzy_beacon'
 const BUCKY_ID = process.env.BUCKY_BEACON_ID || 'bucky_beacon'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY   // service role — no RLS bypass needed
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY   // service role — bypasses RLS
 
 // Tuning
-const FRESH_MS        = parseInt(process.env.FRESH_MS        || '30000', 10)
-const DWELL_MS        = parseInt(process.env.DWELL_MS        || '8000',  10)
-const TICK_MS         = parseInt(process.env.TICK_MS         || '3000',  10)
+const FRESH_MS        = parseInt(process.env.FRESH_MS        || '30000', 10)  // ignore stale readings
+const SAMPLE_MS       = parseInt(process.env.SAMPLE_MS       || '60000', 10)  // one dot per dog per minute
 const MAX_DISTANCE_M  = parseFloat(process.env.MAX_DISTANCE_M || '8')
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -64,9 +63,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 })
 const TABLE = 'wolf_potato_locations'
 
-console.log(`[init] wolf-potato bridge`)
+console.log(`[init] wolf-potato bridge (sampling model)`)
 console.log(`[init] razzy=${RAZZY_ID}  bucky=${BUCKY_ID}`)
-console.log(`[init] mqtt ${MQTT_HOST}:${MQTT_PORT}  fresh=${FRESH_MS}ms dwell=${DWELL_MS}ms`)
+console.log(`[init] mqtt ${MQTT_HOST}:${MQTT_PORT}  sample=${SAMPLE_MS}ms fresh=${FRESH_MS}ms maxDist=${MAX_DISTANCE_M}m`)
 
 // ---------------------------------------------------------------------------
 // Per-dog state
@@ -77,10 +76,6 @@ function makeDogState(name, beaconId) {
     beaconId,
     topic: `espresense/devices/${beaconId}/+`,
     readings: new Map(),    // room -> { distance, ts }
-    currentRoom: null,
-    candidate: null,
-    candidateSince: 0,
-    lastEventId: null,      // Supabase row id of the open (no exited_at) event
   }
 }
 
@@ -140,70 +135,41 @@ function nearestRoom(dog) {
     if (r.distance > MAX_DISTANCE_M) continue
     if (r.distance < bestDist) { bestDist = r.distance; best = room }
   }
-  return best
+  return best ? { room: best, distance: bestDist } : null
 }
 
 // ---------------------------------------------------------------------------
-// Supabase writes
+// Sampling — one dot per dog per SAMPLE_MS
 // ---------------------------------------------------------------------------
-async function enterRoom(dog, room, distanceM) {
-  const now = new Date().toISOString()
+async function sampleDog(dog) {
+  const near = nearestRoom(dog)
+  if (!near) return  // dog not detected anywhere fresh — no dot this round
 
-  // Close the previous open event
-  if (dog.lastEventId) {
-    const { error } = await supabase
-      .from(TABLE)
-      .update({ exited_at: now })
-      .eq('id', dog.lastEventId)
-      .is('exited_at', null)
-    if (error) console.error(`[db] close failed (${dog.name}):`, error.message)
-  }
-
-  // Insert new open event
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from(TABLE)
-    .insert({ dog: dog.name, room, distance_m: distanceM, entered_at: now })
-    .select('id')
-    .maybeSingle()
+    .insert({
+      dog: dog.name,
+      room: near.room,
+      distance_m: near.distance,
+      entered_at: new Date().toISOString(),
+    })
 
-  if (error) {
-    console.error(`[db] insert failed (${dog.name}):`, error.message)
-    dog.lastEventId = null
-  } else {
-    dog.lastEventId = data?.id ?? null
-    console.log(`[enter] ${dog.name} → ${room} (id=${dog.lastEventId})`)
-  }
+  if (error) console.error(`[db] sample failed (${dog.name}):`, error.message)
+  else console.log(`[dot] ${dog.name} @ ${near.room} (${near.distance.toFixed(1)}m)`)
 }
 
+function sampleAll() {
+  for (const dog of Object.values(dogs)) sampleDog(dog)
+}
+
+// First dot shortly after startup (so the map fills in without a full-minute
+// wait), then one per dog every SAMPLE_MS.
+setTimeout(sampleAll, 15_000)
+setInterval(sampleAll, SAMPLE_MS)
+
 // ---------------------------------------------------------------------------
-// Tick loop — one shared interval, processes both dogs
+// Heartbeat — what each dog currently looks like, for log debugging
 // ---------------------------------------------------------------------------
-setInterval(() => {
-  for (const dog of Object.values(dogs)) {
-    const near = nearestRoom(dog)
-    if (!near) continue
-
-    if (near === dog.currentRoom) {
-      dog.candidate = null
-      continue
-    }
-
-    const now = Date.now()
-    if (dog.candidate !== near) {
-      dog.candidate = near
-      dog.candidateSince = now
-      continue
-    }
-    if (now - dog.candidateSince < DWELL_MS) continue
-
-    const distEntry = dog.readings.get(near)
-    dog.currentRoom = near
-    dog.candidate = null
-    enterRoom(dog, near, distEntry?.distance ?? null)
-  }
-}, TICK_MS)
-
-// Heartbeat
 setInterval(() => {
   const now = Date.now()
   for (const dog of Object.values(dogs)) {
@@ -211,7 +177,8 @@ setInterval(() => {
       .filter(([, r]) => now - r.ts <= FRESH_MS)
       .map(([room, r]) => `${room}:${r.distance.toFixed(1)}m`)
       .join(' ')
-    console.log(`[hb] ${dog.name} current=${dog.currentRoom ?? '?'} live=[${live || 'none'}]`)
+    const near = nearestRoom(dog)
+    console.log(`[hb] ${dog.name} nearest=${near?.room ?? '?'} live=[${live || 'none'}]`)
   }
 }, 60_000)
 

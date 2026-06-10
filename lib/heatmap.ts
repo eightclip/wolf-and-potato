@@ -31,34 +31,31 @@ export function getWindowEnd(range: TimeRange): Date {
 }
 
 /**
- * Given raw location events (already filtered to a dog + time window),
- * compute how many minutes were spent in each room.
+ * Given raw sample dots (already filtered to a dog + time window), count how
+ * many dots landed in each room. With 1-dot-per-minute sampling this count is
+ * effectively "minutes spent there."
  */
 export function computeHeat(events: LocationEvent[], liveRoom: RoomId | null): RoomHeat[] {
-  const now = Date.now()
-  const minutes: Partial<Record<RoomId, number>> = {}
+  const counts: Partial<Record<RoomId, number>> = {}
 
   for (const ev of events) {
-    const entered = new Date(ev.entered_at).getTime()
-    const exited = ev.exited_at ? new Date(ev.exited_at).getTime() : now
-    const dwell = Math.max(0, (exited - entered) / 60_000)
     const room = ev.room as RoomId
-    minutes[room] = (minutes[room] ?? 0) + dwell
+    counts[room] = (counts[room] ?? 0) + 1
   }
 
-  const allRooms: RoomId[] = ['garage', 'studio', 'kitchen', 'living_room', 'bedroom', 'yard']
+  const allRooms: RoomId[] = ['kitchen', 'living_room', 'office', 'yard']
   return allRooms.map(room => ({
     room,
-    minutes: minutes[room] ?? 0,
+    count: counts[room] ?? 0,
     isLive: room === liveRoom,
   }))
 }
 
 /**
- * Returns an opacity value 0–0.85 for a heat score, using a sqrt scale
- * so even small dwell times show up a little.
+ * Returns an opacity value 0–0.85 for a dot count, using a sqrt scale
+ * so even a few dots show up a little.
  */
-export function heatOpacity(minutes: number, maxMinutes: number): number {
-  if (minutes === 0 || maxMinutes === 0) return 0
-  return Math.min(0.85, 0.12 + 0.73 * Math.sqrt(minutes / maxMinutes))
+export function heatOpacity(count: number, maxCount: number): number {
+  if (count === 0 || maxCount === 0) return 0
+  return Math.min(0.85, 0.12 + 0.73 * Math.sqrt(count / maxCount))
 }

@@ -56,7 +56,7 @@ export default function HeatLayer({ dog, heat, visible }: Props) {
   if (!visible) return null
 
   const meta = DOG_META[dog]
-  const maxMinutes = Math.max(1, ...heat.map(h => h.minutes))
+  const maxCount = Math.max(1, ...heat.map(h => h.count))
   const gradId = `heat-grad-${dog}`
 
   return (
@@ -71,9 +71,9 @@ export default function HeatLayer({ dog, heat, visible }: Props) {
         </radialGradient>
       </defs>
 
-      {heat.map(({ room, minutes, isLive }) => {
+      {heat.map(({ room, count, isLive }) => {
         const bounds = ROOM_META[room]
-        const opacity = heatOpacity(minutes, maxMinutes)
+        const opacity = heatOpacity(count, maxCount)
         const intensity = opacity  // same 0–1 scale
 
         if (opacity === 0 && !isLive) return null

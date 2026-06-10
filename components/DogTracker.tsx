@@ -31,6 +31,7 @@ export default function DogTracker() {
       .gte('entered_at', start.toISOString())
       .lte('entered_at', end.toISOString())
       .order('entered_at', { ascending: true })
+      .limit(10000)
 
     setEvents((data as LocationEvent[]) ?? [])
     setLoading(false)
@@ -56,8 +57,10 @@ export default function DogTracker() {
 
   function getDogState(dog: Dog): { heat: RoomHeat[]; liveRoom: RoomId | null } {
     const dogEvents = events.filter(e => e.dog === dog)
-    const liveEvent = [...dogEvents].reverse().find(e => e.exited_at === null)
-    const liveRoom = (liveEvent?.room as RoomId) ?? null
+    // "Here now" = the most recent sample dot, if it's fresh (within 5 min).
+    const last = dogEvents[dogEvents.length - 1]
+    const fresh = last && Date.now() - new Date(last.entered_at).getTime() < 5 * 60_000
+    const liveRoom = fresh ? (last.room as RoomId) : null
     return { heat: computeHeat(dogEvents, liveRoom), liveRoom }
   }
 

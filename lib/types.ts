@@ -1,36 +1,35 @@
 export type Dog = 'razzy' | 'bucky'
 
+// The four rooms we actually have ESPresense sensors in.
 export type RoomId =
-  | 'garage'
-  | 'studio'
   | 'kitchen'
   | 'living_room'
-  | 'bedroom'
+  | 'office'
   | 'yard'
 
 export interface LocationEvent {
   id: number
   dog: Dog
   room: RoomId
-  entered_at: string   // ISO timestamptz
+  entered_at: string   // ISO timestamptz — the moment this dot was sampled
   exited_at: string | null
   distance_m: number | null
 }
 
-// Aggregated time-spent per room, used for heatmap rendering
+// Per-room heat for the map. With 1-dot-per-minute sampling, `count` is the
+// number of sample dots in the window, which ≈ minutes the dog spent there.
 export interface RoomHeat {
   room: RoomId
-  minutes: number       // total dwell time in selected window
+  count: number         // sample dots in the selected window
   isLive: boolean       // dog is currently here
 }
 
 export type TimeRange = '1h' | '6h' | 'today' | 'yesterday'
 
-// Rough pixel bounding box of each room in the floor plan SVG
-// Canvas: 380w x 900h — portrait, matches real lot proportions
-// Top: studio (top-left shed) + garage (top-right detached)
-// Middle: open yard
-// Bottom: main house — kitchen (right), living room (center), bedroom (bottom-left)
+// Pixel bounding box of each room in the floor plan SVG.
+// Canvas: 460w × 640h — portrait.
+// House across the top (living room left, kitchen top-right, office bottom-right),
+// open yard below. Only rooms with a real sensor are drawn.
 export interface RoomBounds {
   x: number
   y: number
@@ -39,25 +38,20 @@ export interface RoomBounds {
   label: string
 }
 
-// Canvas: 460w × 820h
 export const ROOM_META: Record<RoomId, RoomBounds> = {
-  studio:      { x: 24,  y: 24,  width: 112, height: 96,  label: 'Studio' },
-  garage:      { x: 268, y: 24,  width: 164, height: 130, label: 'Garage' },
-  yard:        { x: 24,  y: 166, width: 408, height: 240, label: 'Yard' },
-  kitchen:     { x: 268, y: 456, width: 164, height: 148, label: 'Kitchen' },
-  living_room: { x: 60,  y: 456, width: 188, height: 148, label: 'Living Room' },
-  bedroom:     { x: 24,  y: 624, width: 196, height: 168, label: 'Bedroom' },
+  living_room: { x: 24,  y: 40,  width: 200, height: 300, label: 'Living Room' },
+  kitchen:     { x: 224, y: 40,  width: 212, height: 150, label: 'Kitchen' },
+  office:      { x: 224, y: 190, width: 212, height: 150, label: 'Office' },
+  yard:        { x: 24,  y: 372, width: 412, height: 236, label: 'Yard' },
 }
 
-// ESP32 node positions within each room (pixel coords in SVG canvas)
-// Used for rendering node markers on the floor plan
-export const NODE_POSITIONS: Record<RoomId, { x: number; y: number } | null> = {
-  studio:      { x: 122, y: 106 },  // bottom-right of studio
-  garage:      { x: 284, y: 138 },  // bottom-left of garage
-  yard:        null,
-  kitchen:     { x: 284, y: 530 },  // left-middle of kitchen
-  living_room: { x: 154, y: 472 },  // top-middle of living room
-  bedroom:     { x: 122, y: 640 },  // top-middle of bedroom
+// ESP32 sensor positions within each room (pixel coords in the SVG canvas).
+// Placed off-center so they don't sit under the room labels.
+export const NODE_POSITIONS: Record<RoomId, { x: number; y: number }> = {
+  living_room: { x: 60,  y: 304 },
+  kitchen:     { x: 392, y: 64  },
+  office:      { x: 392, y: 214 },
+  yard:        { x: 150, y: 432 },
 }
 
 export const DOG_META: Record<Dog, { label: string; emoji: string; color: string; heatColor: string }> = {
