@@ -28,15 +28,15 @@ export interface RoomHeat {
 
 export type TimeRange = '1h' | '6h' | 'today' | 'yesterday'
 
-// Each data room maps to one physical sensor on the drawn lot, with its pixel
-// position on the 480×480 floor-plan canvas and the label to show.
-// Mapping confirmed by John: office sensor lives in the Studio, yard sensor
-// lives by the Garage.
+// Each data room maps to one of the blue sensor dots in John's hand-drawn lot
+// sketch (public/lot-sketch.png). Coords are in the 480×360 floor-plan canvas
+// (the 1200×900 image scaled by 0.4). Mapping confirmed by John: office sensor
+// lives in the Studio, yard sensor lives by the Garage.
 export const SENSORS: Record<RoomId, { x: number; y: number; label: string }> = {
-  office:      { x: 150, y: 104, label: 'Studio' },
-  yard:        { x: 396, y: 104, label: 'Garage' },
-  living_room: { x: 244, y: 404, label: 'Living Room' },
-  kitchen:     { x: 372, y: 416, label: 'Kitchen' },
+  office:      { x: 152, y: 76,  label: 'Studio' },
+  yard:        { x: 225, y: 158, label: 'Garage' },
+  living_room: { x: 233, y: 300, label: 'Living Room' },
+  kitchen:     { x: 270, y: 318, label: 'Kitchen' },
 }
 
 export const DOG_META: Record<Dog, { label: string; emoji: string; color: string; heatColor: string }> = {

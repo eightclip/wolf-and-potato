@@ -163,7 +163,7 @@ export default function DogTracker() {
         {loading ? (
           <div
             className="flex items-center justify-center"
-            style={{ height: 384, background: '#f7f4ef' }}
+            style={{ height: 288, background: '#f7f4ef' }}
           >
             <span className="text-3xl opacity-40 animate-pulse">◦ ◦ ◦</span>
           </div>
