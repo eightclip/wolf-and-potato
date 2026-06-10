@@ -26,7 +26,11 @@ export interface RoomHeat {
 
 export type TimeRange = '1h' | '6h' | 'today' | 'yesterday'
 
-// Rough pixel bounding box of each room in the floor plan SVG (1000x600 canvas)
+// Rough pixel bounding box of each room in the floor plan SVG
+// Canvas: 380w x 900h — portrait, matches real lot proportions
+// Top: studio (top-left shed) + garage (top-right detached)
+// Middle: open yard
+// Bottom: main house — kitchen (right), living room (center), bedroom (bottom-left)
 export interface RoomBounds {
   x: number
   y: number
@@ -35,13 +39,25 @@ export interface RoomBounds {
   label: string
 }
 
+// Canvas: 460w × 820h
 export const ROOM_META: Record<RoomId, RoomBounds> = {
-  garage:      { x: 20,  y: 20,  width: 200, height: 220, label: 'Garage' },
-  studio:      { x: 240, y: 20,  width: 240, height: 220, label: 'Studio' },
-  kitchen:     { x: 500, y: 20,  width: 220, height: 220, label: 'Kitchen' },
-  living_room: { x: 20,  y: 260, width: 460, height: 220, label: 'Living Room' },
-  bedroom:     { x: 500, y: 260, width: 220, height: 220, label: 'Bedroom' },
-  yard:        { x: 20,  y: 500, width: 700, height: 120, label: 'Yard' },
+  studio:      { x: 24,  y: 24,  width: 112, height: 96,  label: 'Studio' },
+  garage:      { x: 268, y: 24,  width: 164, height: 130, label: 'Garage' },
+  yard:        { x: 24,  y: 166, width: 408, height: 240, label: 'Yard' },
+  kitchen:     { x: 268, y: 456, width: 164, height: 148, label: 'Kitchen' },
+  living_room: { x: 60,  y: 456, width: 188, height: 148, label: 'Living Room' },
+  bedroom:     { x: 24,  y: 624, width: 196, height: 168, label: 'Bedroom' },
+}
+
+// ESP32 node positions within each room (pixel coords in SVG canvas)
+// Used for rendering node markers on the floor plan
+export const NODE_POSITIONS: Record<RoomId, { x: number; y: number } | null> = {
+  studio:      { x: 122, y: 106 },  // bottom-right of studio
+  garage:      { x: 284, y: 138 },  // bottom-left of garage
+  yard:        null,
+  kitchen:     { x: 284, y: 530 },  // left-middle of kitchen
+  living_room: { x: 154, y: 472 },  // top-middle of living room
+  bedroom:     { x: 122, y: 640 },  // top-middle of bedroom
 }
 
 export const DOG_META: Record<Dog, { label: string; emoji: string; color: string; heatColor: string }> = {

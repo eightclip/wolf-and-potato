@@ -9,11 +9,31 @@ import type { Dog, LocationEvent, RoomHeat, RoomId, TimeRange } from '@/lib/type
 import { DOG_META } from '@/lib/types'
 
 const TIME_OPTIONS: { label: string; value: TimeRange }[] = [
-  { label: 'Last hour', value: '1h' },
-  { label: 'Last 6h', value: '6h' },
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
+  { label: '1H', value: '1h' },
+  { label: '6H', value: '6h' },
+  { label: 'TODAY', value: 'today' },
+  { label: 'YESTERDAY', value: 'yesterday' },
 ]
+
+// Mock data for visual preview when no beacons are connected
+const MOCK_HEAT: Record<Dog, RoomHeat[]> = {
+  razzy: [
+    { room: 'bedroom',     minutes: 240, isLive: true  },
+    { room: 'living_room', minutes: 90,  isLive: false },
+    { room: 'yard',        minutes: 60,  isLive: false },
+    { room: 'kitchen',     minutes: 20,  isLive: false },
+    { room: 'studio',      minutes: 5,   isLive: false },
+    { room: 'garage',      minutes: 0,   isLive: false },
+  ],
+  bucky: [
+    { room: 'living_room', minutes: 180, isLive: false },
+    { room: 'yard',        minutes: 120, isLive: true  },
+    { room: 'bedroom',     minutes: 45,  isLive: false },
+    { room: 'kitchen',     minutes: 30,  isLive: false },
+    { room: 'garage',      minutes: 10,  isLive: false },
+    { room: 'studio',      minutes: 0,   isLive: false },
+  ],
+}
 
 export default function DogTracker() {
   const [visible, setVisible] = useState<Record<Dog, boolean>>({ razzy: true, bucky: true })
@@ -36,13 +56,11 @@ export default function DogTracker() {
     setLoading(false)
   }, [timeRange])
 
-  // Initial + time range fetch
   useEffect(() => {
     setLoading(true)
     fetchEvents()
   }, [fetchEvents])
 
-  // Realtime subscription — insert new rows live
   useEffect(() => {
     const sb = getSupabase()
     const channel = sb
@@ -50,94 +68,90 @@ export default function DogTracker() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: LOCATIONS_TABLE },
-        () => {
-          // Re-fetch on any change; simple and correct
-          fetchEvents()
-        }
+        () => { fetchEvents() }
       )
       .subscribe()
-
     return () => { sb.removeChannel(channel) }
   }, [fetchEvents])
 
-  // Derive heat + live position per dog
   function getDogState(dog: Dog): { heat: RoomHeat[]; liveRoom: RoomId | null } {
     const dogEvents = events.filter(e => e.dog === dog)
-
-    // Most recent event without exited_at = currently live
-    const liveEvent = [...dogEvents]
-      .reverse()
-      .find(e => e.exited_at === null)
+    const liveEvent = [...dogEvents].reverse().find(e => e.exited_at === null)
     const liveRoom = (liveEvent?.room as RoomId) ?? null
-
-    const heat = computeHeat(dogEvents, liveRoom)
-    return { heat, liveRoom }
+    return { heat: computeHeat(dogEvents, liveRoom), liveRoom }
   }
 
-  const razzy = getDogState('razzy')
-  const bucky = getDogState('bucky')
-
-  const toggleDog = (dog: Dog) =>
-    setVisible(v => ({ ...v, [dog]: !v[dog] }))
+  const noData = !loading && events.length === 0
+  const razzy = noData ? { heat: MOCK_HEAT.razzy, liveRoom: 'bedroom' as RoomId } : getDogState('razzy')
+  const bucky = noData ? { heat: MOCK_HEAT.bucky, liveRoom: 'yard' as RoomId }    : getDogState('bucky')
+  const toggleDog = (dog: Dog) => setVisible(v => ({ ...v, [dog]: !v[dog] }))
 
   return (
-    <div className="min-h-screen bg-amber-50 p-4 md:p-8">
+    <div
+      className="min-h-screen flex flex-col items-center px-4 py-8"
+      style={{ background: '#f2ede6', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}
+    >
       {/* Header */}
-      <header className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-amber-900 tracking-tight"
-            style={{ fontFamily: "'Comic Sans MS', 'Chalkboard SE', cursive" }}>
-          🐾 Wolf &amp; Potato
+      <header className="mb-8 text-center">
+        <p className="text-xs tracking-[0.25em] text-stone-400 uppercase mb-1">
+          Wolf &amp; Potato
+        </p>
+        <h1 className="text-xl font-light tracking-tight text-stone-700">
+          where are the babies
         </h1>
-        <p className="text-amber-700 text-sm mt-1">where are the babies?</p>
       </header>
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-3 justify-center mb-6">
-        {/* Dog toggles */}
+      {/* Dog toggles + time range */}
+      <div className="flex flex-wrap gap-4 justify-center items-center mb-6">
         {(['razzy', 'bucky'] as Dog[]).map(dog => {
           const meta = DOG_META[dog]
           const on = visible[dog]
+          const liveRoom = dog === 'razzy' ? razzy.liveRoom : bucky.liveRoom
+          const dotColor = dog === 'razzy' ? '#60a5fa' : '#fb923c'
+
           return (
             <button
               key={dog}
               onClick={() => toggleDog(dog)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-semibold text-sm transition-all ${
-                on
-                  ? dog === 'razzy'
-                    ? 'bg-blue-100 border-blue-400 text-blue-800'
-                    : 'bg-orange-100 border-orange-400 text-orange-800'
-                  : 'bg-stone-100 border-stone-300 text-stone-400 opacity-60'
-              }`}
+              className="flex items-center gap-2.5 px-4 py-2 rounded-full text-sm transition-all"
+              style={{
+                background: on ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)',
+                border: `1.5px solid ${on ? dotColor : '#d4cfc8'}`,
+                color: on ? '#2a2520' : '#a09890',
+                backdropFilter: 'blur(4px)',
+              }}
             >
-              <span>{meta.emoji}</span>
-              <span>{meta.label}</span>
-              {/* Live room badge */}
-              {on && (razzy.liveRoom || bucky.liveRoom) && (
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: on ? dotColor : '#d4cfc8' }}
+              />
+              <span className="font-medium tracking-wide">{meta.label}</span>
+              {on && liveRoom && (
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    dog === 'razzy'
-                      ? 'bg-blue-200 text-blue-700'
-                      : 'bg-orange-200 text-orange-700'
-                  }`}
+                  className="text-xs tracking-wider uppercase"
+                  style={{ color: dotColor, opacity: 0.8 }}
                 >
-                  {(dog === 'razzy' ? razzy.liveRoom : bucky.liveRoom)?.replace('_', ' ') ?? '?'}
+                  {liveRoom.replace('_', ' ')}
                 </span>
               )}
             </button>
           )
         })}
 
-        {/* Time range pills */}
-        <div className="flex gap-1 bg-stone-100 rounded-full p-1">
+        {/* Time pills */}
+        <div
+          className="flex gap-0.5 rounded-full p-1"
+          style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid #d4cfc8' }}
+        >
           {TIME_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => setTimeRange(opt.value)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                timeRange === opt.value
-                  ? 'bg-amber-400 text-amber-900 shadow-sm'
-                  : 'text-stone-500 hover:text-stone-700'
-              }`}
+              className="px-3 py-1 rounded-full text-xs font-medium tracking-widest transition-all"
+              style={{
+                background: timeRange === opt.value ? '#2a2520' : 'transparent',
+                color: timeRange === opt.value ? '#f2ede6' : '#8a7f74',
+              }}
             >
               {opt.label}
             </button>
@@ -145,11 +159,17 @@ export default function DogTracker() {
         </div>
       </div>
 
-      {/* Floor plan */}
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-md p-4 border border-amber-200">
+      {/* Map card */}
+      <div
+        className="w-full max-w-sm rounded-2xl overflow-hidden shadow-sm"
+        style={{ border: '1px solid #d4cfc8' }}
+      >
         {loading ? (
-          <div className="flex items-center justify-center h-64 text-amber-400">
-            <span className="text-4xl animate-bounce">🐾</span>
+          <div
+            className="flex items-center justify-center"
+            style={{ height: 420, background: '#f7f4ef' }}
+          >
+            <span className="text-3xl opacity-40 animate-pulse">◦ ◦ ◦</span>
           </div>
         ) : (
           <FloorPlan>
@@ -160,24 +180,21 @@ export default function DogTracker() {
       </div>
 
       {/* Legend */}
-      <div className="flex gap-6 justify-center mt-4 text-xs text-stone-500">
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />
-          Razzy (Wolf)
+      <div className="flex gap-6 mt-5 text-xs tracking-widest uppercase text-stone-400">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-400 opacity-80" />
+          Razzy
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-full bg-orange-400 inline-block" />
-          Bucky (Potato)
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-orange-400 opacity-80" />
+          Bucky
         </span>
-        <span className="flex items-center gap-1">
-          <span>Darker = more time spent</span>
-        </span>
+        <span>density = time</span>
       </div>
 
-      {/* No-data hint */}
-      {!loading && events.length === 0 && (
-        <p className="text-center text-stone-400 text-sm mt-6">
-          No movement data for this window yet — are the beacons on? 🔋
+      {noData && (
+        <p className="text-center text-stone-400 text-xs tracking-[0.2em] uppercase mt-4 opacity-50">
+          preview mode — connect beacons for live data
         </p>
       )}
     </div>
