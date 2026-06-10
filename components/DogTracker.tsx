@@ -6,7 +6,7 @@ import { computeHeat, getWindowStart, getWindowEnd } from '@/lib/heatmap'
 import FloorPlan from './FloorPlan'
 import HeatLayer from './HeatLayer'
 import type { Dog, LocationEvent, RoomHeat, RoomId, TimeRange } from '@/lib/types'
-import { DOG_META } from '@/lib/types'
+import { DOG_META, SENSORS } from '@/lib/types'
 
 const TIME_OPTIONS: { label: string; value: TimeRange }[] = [
   { label: '1H', value: '1h' },
@@ -69,6 +69,13 @@ export default function DogTracker() {
   const bucky = getDogState('bucky')
   const toggleDog = (dog: Dog) => setVisible(v => ({ ...v, [dog]: !v[dog] }))
 
+  // Which sensors should pulse right now (a visible dog is live there)
+  const liveSensors: { room: RoomId; color: string; emoji: string }[] = []
+  if (visible.razzy && razzy.liveRoom)
+    liveSensors.push({ room: razzy.liveRoom, color: DOG_META.razzy.color, emoji: DOG_META.razzy.emoji })
+  if (visible.bucky && bucky.liveRoom)
+    liveSensors.push({ room: bucky.liveRoom, color: DOG_META.bucky.color, emoji: DOG_META.bucky.emoji })
+
   return (
     <div
       className="min-h-screen flex flex-col items-center px-4 py-8"
@@ -120,7 +127,7 @@ export default function DogTracker() {
                   className="text-xs tracking-wider uppercase"
                   style={{ color: dotColor, opacity: 0.8 }}
                 >
-                  {liveRoom.replace('_', ' ')}
+                  {SENSORS[liveRoom].label}
                 </span>
               )}
             </button>
@@ -156,12 +163,12 @@ export default function DogTracker() {
         {loading ? (
           <div
             className="flex items-center justify-center"
-            style={{ height: 420, background: '#f7f4ef' }}
+            style={{ height: 384, background: '#f7f4ef' }}
           >
             <span className="text-3xl opacity-40 animate-pulse">◦ ◦ ◦</span>
           </div>
         ) : (
-          <FloorPlan>
+          <FloorPlan liveSensors={liveSensors}>
             <HeatLayer dog="razzy" heat={razzy.heat} visible={visible.razzy} />
             <HeatLayer dog="bucky" heat={bucky.heat} visible={visible.bucky} />
           </FloorPlan>

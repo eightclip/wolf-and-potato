@@ -37,18 +37,24 @@ export function getWindowEnd(range: TimeRange): Date {
  */
 export function computeHeat(events: LocationEvent[], liveRoom: RoomId | null): RoomHeat[] {
   const counts: Partial<Record<RoomId, number>> = {}
+  const distSum: Partial<Record<RoomId, number>> = {}
 
   for (const ev of events) {
     const room = ev.room as RoomId
     counts[room] = (counts[room] ?? 0) + 1
+    distSum[room] = (distSum[room] ?? 0) + (ev.distance_m ?? 0)
   }
 
   const allRooms: RoomId[] = ['kitchen', 'living_room', 'office', 'yard']
-  return allRooms.map(room => ({
-    room,
-    count: counts[room] ?? 0,
-    isLive: room === liveRoom,
-  }))
+  return allRooms.map(room => {
+    const count = counts[room] ?? 0
+    return {
+      room,
+      count,
+      avgDistance: count ? (distSum[room] ?? 0) / count : 0,
+      isLive: room === liveRoom,
+    }
+  })
 }
 
 /**
