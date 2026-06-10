@@ -33,10 +33,10 @@ export type TimeRange = '1h' | '6h' | 'today' | 'yesterday'
 // (the 1200×900 image scaled by 0.4). Mapping confirmed by John: office sensor
 // lives in the Studio, yard sensor lives by the Garage.
 export const SENSORS: Record<RoomId, { x: number; y: number; label: string }> = {
-  office:      { x: 152, y: 76,  label: 'Studio' },
-  yard:        { x: 225, y: 158, label: 'Garage' },
-  living_room: { x: 233, y: 300, label: 'Living Room' },
-  kitchen:     { x: 270, y: 318, label: 'Kitchen' },
+  office:      { x: 135, y: 99,  label: 'Studio' },
+  yard:        { x: 259, y: 237, label: 'Garage' },
+  living_room: { x: 272, y: 476, label: 'Living Room' },
+  kitchen:     { x: 335, y: 508, label: 'Kitchen' },
 }
 
 export const DOG_META: Record<Dog, { label: string; emoji: string; color: string; heatColor: string }> = {

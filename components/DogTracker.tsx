@@ -157,13 +157,13 @@ export default function DogTracker() {
 
       {/* Map card */}
       <div
-        className="w-full max-w-sm rounded-2xl overflow-hidden shadow-sm"
+        className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-sm"
         style={{ border: '1px solid #d4cfc8' }}
       >
         {loading ? (
           <div
             className="flex items-center justify-center"
-            style={{ height: 288, background: '#f7f4ef' }}
+            style={{ aspectRatio: '480 / 576', background: '#f7f4ef' }}
           >
             <span className="text-3xl opacity-40 animate-pulse">◦ ◦ ◦</span>
           </div>

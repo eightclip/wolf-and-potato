@@ -10,9 +10,9 @@ interface Props {
   children?: React.ReactNode
 }
 
-// 4:3 canvas matching the lot-sketch.png image (1200×900 scaled to 480×360)
+// Canvas matching the cropped lot-sketch.png (1500×1799 → 480×576)
 const W = 480
-const H = 360
+const H = 576
 
 export default function FloorPlan({ liveSensors = [], children }: Props) {
   const liveByRoom = new Map<RoomId, LiveSensor[]>()
