@@ -6,5 +6,53 @@
 
 body {
   margin: 0;
-  background-color: #fffbeb;
+  background: #0d0b09;
+  color: #e7e2da;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+.mono {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+}
+
+/* Page entrance */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.rise { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Embers drifting up out of warm rooms */
+@keyframes ember {
+  0%   { transform: translateY(6px) scale(0.8); opacity: 0; }
+  12%  { opacity: var(--eo, 0.55); }
+  70%  { opacity: calc(var(--eo, 0.55) * 0.45); }
+  100% { transform: translateY(-34px) scale(1.1); opacity: 0; }
+}
+.ember {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ember var(--ed, 6s) linear var(--edl, 0s) infinite;
+}
+
+/* Gentle idle bob for the dog emoji markers */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3.5px); }
+}
+.bob {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bob 2.8s ease-in-out infinite;
+}
+
+/* Soft blink for the LIVE dot */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.blink { animation: blink 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ember, .blink, .rise, .bob { animation: none; }
 }

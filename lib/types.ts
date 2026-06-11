@@ -16,12 +16,14 @@ export interface LocationEvent {
   distance_m: number | null
 }
 
-// Per-room heat. `count` = number of sample dots (≈ minutes at 1/min).
-// `avgDistance` = mean signal distance in metres; drives how tight/loose the
-// stipple cloud sits around the sensor (close signal = tight, far = diffuse).
+// Per-room heat. `count` = raw sample dots (≈ minutes at 1/min, used for
+// stats). `heat` = recency-decayed sum — grows while a dog stays, cools once
+// they move on; this drives the glow. `avgDistance` = recency-weighted mean
+// signal distance in metres; close signal = tight pool, far = diffuse.
 export interface RoomHeat {
   room: RoomId
   count: number
+  heat: number
   avgDistance: number
   isLive: boolean
 }
